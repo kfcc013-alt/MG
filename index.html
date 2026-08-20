@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MG새마을금고 대출 상환 비교 시뮬레이터 (김금고 마스코트)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mgblue: {
+                            50: '#e6f0fa',
+                            100: '#cce1f5',
+                            200: '#99c3eb',
+                            500: '#005BAC', // MG Primary Blue
+                            600: '#004d93',
+                            700: '#003e77',
+                            800: '#002f5a',
+                            900: '#001e3a',
+                        },
+                        mggreen: {
+                            500: '#139D48', // MG Accent Green
+                            600: '#0f823b',
+                        },
+                        mgsky: {
+                            500: '#00A3E0',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f4f7fa;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Print styles for customer consultation summary sheet */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-card {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        /* Character animation */
+        @keyframes bounce-gentle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-bounce-gentle {
+            animation: bounce-gentle 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <header class="bg-mgblue-500 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- Kim Geum-go Header Avatar SVG -->
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 shadow-md border-2 border-mgsky-500 shrink-0">
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <!-- Head -->
+                        <circle cx="50" cy="55" r="38" fill="#FFDC2E" />
+                        <circle cx="50" cy="55" r="35" fill="#FFE867" />
+                        <path d="M 18,55 A 32,32 0 0,1 82,55" fill="none" stroke="#E5B800" stroke-width="2"/>
+                        <!-- MG Cap -->
+                        <path d="M 22,42 C 22,20 78,20 78,42 Z" fill="#005BAC" />
+                        <path d="M 15,42 Q 50,36 85,42 L 80,47 Q 50,42 20,47 Z" fill="#004D93" />
+                        <rect x="38" y="22" width="24" height="12" rx="3" fill="#FFFFFF" />
+                        <text x="50" y="31" font-family="sans-serif" font-weight="900" font-size="9" fill="#005BAC" text-anchor="middle">MG</text>
+                        <!-- Eyes & Cheeks -->
+                        <circle cx="36" cy="55" r="4.5" fill="#2D3748" />
+                        <circle cx="64" cy="55" r="4.5" fill="#2D3748" />
+                        <circle cx="38" cy="53" r="1.5" fill="#FFFFFF" />
+                        <circle cx="66" cy="53" r="1.5" fill="#FFFFFF" />
+                        <circle cx="28" cy="62" r="5" fill="#FF8A8A" opacity="0.7" />
+                        <circle cx="72" cy="62" r="5" fill="#FF8A8A" opacity="0.7" />
+                        <!-- Smile -->
+                        <path d="M 42,63 Q 50,71 58,63" fill="none" stroke="#2D3748" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight flex items-center gap-2">
+                        <span>새마을금고</span>
+                        <span class="text-xs bg-white/20 text-white font-medium px-2 py-0.5 rounded-full">대출 비교 계산기</span>
+                    </h1>
+                    <p class="text-xs text-blue-100 hidden sm:block">창구 직원 & MG더뱅킹 고객 맞춤형 대출 상환 시뮬레이터</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button onclick="toggleMode('staff')" id="btnModeStaff" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-mgblue-500 transition-all shadow-sm">
+                    <i class="fa-solid fa-user-tie mr-1"></i>창구 직원용
+                </button>
+                <button onclick="toggleMode('customer')" id="btnModeCustomer" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-mgblue-600 text-blue-100 hover:text-white transition-all">
+                    <i class="fa-solid fa-mobile-screen-button mr-1"></i>MG더뱅킹용
+                </button>
+                <button onclick="window.print()" class="no-print p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all text-xs flex items-center gap-1 ml-2" title="상담표 인쇄">
+                    <i class="fa-solid fa-print"></i>
+                    <span class="hidden md:inline">상담표 출력</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow">
+        
+        <!-- Printable Header (Only appears when printing) -->
+        <div class="print-only mb-6 border-b pb-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12">
+                        <svg viewBox="0 0 100 100" class="w-full h-full">
+                            <circle cx="50" cy="55" r="38" fill="#FFDC2E" />
+                            <path d="M 22,42 C 22,20 78,20 78,42 Z" fill="#005BAC" />
+                            <rect x="38" y="22" width="24" height="12" rx="3" fill="#FFFFFF" />
+                            <text x="50" y="31" font-family="sans-serif" font-weight="900" font-size="9" fill="#005BAC" text-anchor="middle">MG</text>
+                            <circle cx="36" cy="55" r="4.5" fill="#2D3748" />
+                            <circle cx="64" cy="55" r="4.5" fill="#2D3748" />
+                            <path d="M 42,63 Q 50,71 58,63" fill="none" stroke="#2D3748" stroke-width="3" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-mgblue-500">MG새마을금고 대출 상환 시뮬레이션 결과서</h1>
+                        <p class="text-xs text-gray-500">본 계산 결과는 대출 조건에 따른 이해를 돕기 위한 수치이며, 실제 대출 실행 시 금리 변동 및 일수에 따라 미세한 차이가 발생할 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-600">
+                    <p>상담 일자: <span id="printDate"></span></p>
+                    <p>취급점: 새마을금고 영업점</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <section class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 no-print flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                        <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-mgblue-500"></i>
+                            <span>대출 조건 입력</span>
+                        </h2>
+                        <button onclick="resetInputs()" class="text-xs text-slate-400 hover:text-mgblue-500 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-right"></i> 초기화
+                        </button>
+                    </div>
+
+                    <!-- Input Form -->
+                    <div class="space-y-5">
+                        
+                        <!-- 1. Loan Amount -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-bold text-slate-700">대출 원금</label>
+                                <span class="text-xs font-extrabold text-mgblue-500" id="formattedAmountText">5,000 만원</span>
+                            </div>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="inputAmount" value="50000000" step="1000000" min="1000000" max="1000000000"
+                                    class="w-full text-right font-bold text-lg pr-10 pl-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-mgblue-500 focus:border-mgblue-500 transition-all text-slate-800"
+                                    oninput="updateInputsFromNumber('amount')">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-sm font-semibold">
+                                    원
+                                </div>
+                            </div>
+                            <!-- Quick Amount Buttons (+100만, +500만, +1000만, +5000만) -->
+                            <div class="grid grid-cols-4 gap-1.5 mt-2">
+                                <button onclick="addAmount(1000000)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+100만</button>
+                                <button onclick="addAmount(5000000)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+500만</button>
+                                <button onclick="addAmount(10000000)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+1,000만</button>
+                                <button onclick="addAmount(50000000)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+5,000만</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Interest Rate -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-bold text-slate-700">연 이자율 (%)</label>
+                                <span class="text-xs font-extrabold text-mgblue-500" id="formattedRateText">4.50 %</span>
+                            </div>
+                            <div class="relative rounded-xl shadow-sm mb-2">
+                                <input type="number" id="inputRate" value="4.5" step="0.01" min="0.1" max="24"
+                                    class="w-full text-right font-bold text-lg pr-10 pl-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-mgblue-500 focus:border-mgblue-500 transition-all text-slate-800"
+                                    oninput="updateInputsFromNumber('rate')">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-sm font-semibold">
+                                    %
+                                </div>
+                            </div>
+                            <input type="range" id="rangeRate" min="1" max="15" step="0.1" value="4.5" 
+                                class="w-full accent-mgblue-500 cursor-pointer"
+                                oninput="updateInputsFromRange('rate')">
+                            <!-- Rate Quick Adjustment Buttons -->
+                            <div class="grid grid-cols-4 gap-1.5 mt-2">
+                                <button onclick="addRate(-0.1)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">-0.1%</button>
+                                <button onclick="addRate(0.1)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+0.1%</button>
+                                <button onclick="addRate(0.5)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+0.5%</button>
+                                <button onclick="addRate(1.0)" class="py-1 px-2 text-xs bg-slate-100 hover:bg-mgblue-50 hover:text-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">+1.0%</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Loan Period with Unit Selector (개월 / 년) -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-bold text-slate-700">대출 기간</label>
+                                <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100">
+                                    <button onclick="togglePeriodUnit('months')" id="unitBtnMonths" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-white text-mgblue-600 shadow-xs">개월</button>
+                                    <button onclick="togglePeriodUnit('years')" id="unitBtnYears" class="px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-700">년</button>
+                                </div>
+                            </div>
+                            <div class="relative rounded-xl shadow-sm mb-2">
+                                <input type="number" id="inputPeriod" value="36" step="1" min="1" max="360"
+                                    class="w-full text-right font-bold text-lg pr-14 pl-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-mgblue-500 focus:border-mgblue-500 transition-all text-slate-800"
+                                    oninput="updateInputsFromNumber('period')">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-sm font-semibold" id="periodUnitLabel">
+                                    개월
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button onclick="setPeriod(12)" data-months="12" class="period-btn py-1 px-2 text-xs border border-slate-200 hover:bg-mgblue-50 hover:border-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">1년 (12M)</button>
+                                <button onclick="setPeriod(24)" data-months="24" class="period-btn py-1 px-2 text-xs border border-slate-200 hover:bg-mgblue-50 hover:border-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">2년 (24M)</button>
+                                <button onclick="setPeriod(36)" data-months="36" class="period-btn active bg-mgblue-50 border-mgblue-500 text-mgblue-600 py-1 px-2 text-xs border rounded-lg font-medium transition-colors">3년 (36M)</button>
+                                <button onclick="setPeriod(60)" data-months="60" class="period-btn py-1 px-2 text-xs border border-slate-200 hover:bg-mgblue-50 hover:border-mgblue-500 rounded-lg text-slate-600 font-medium transition-colors">5년 (60M)</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. Grace Period -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-bold text-slate-700">거치 기간 (원금상환 유예)</label>
+                                <span class="text-xs font-extrabold text-mgblue-500" id="formattedGraceText">없음 (0개월)</span>
+                            </div>
+                            <select id="selectGrace" onchange="calculateAll()" class="w-full font-bold text-sm px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-mgblue-500 focus:border-mgblue-500 text-slate-800 bg-white">
+                                <option value="0">거치 없음 (바로 원금상환)</option>
+                                <option value="6">6개월 거치</option>
+                                <option value="12">1년 (12개월) 거치</option>
+                                <option value="24">2년 (24개월) 거치</option>
+                                <option value="36">3년 (36개월) 거치</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- Guidance Info Box with Kim Geum-go Mascot -->
+                    <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-xl text-xs text-slate-500 relative">
+                        <div class="flex items-start gap-3">
+                            <div class="w-12 h-12 shrink-0 animate-bounce-gentle">
+                                <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm">
+                                    <circle cx="50" cy="50" r="35" fill="#FFDC2E" />
+                                    <circle cx="50" cy="50" r="32" fill="#FFE867" />
+                                    <path d="M 22,38 C 22,18 78,18 78,38 Z" fill="#005BAC" />
+                                    <path d="M 15,38 Q 50,32 85,38 L 80,43 Q 50,38 20,43 Z" fill="#004D93" />
+                                    <rect x="38" y="20" width="24" height="11" rx="2.5" fill="#FFFFFF" />
+                                    <text x="50" y="28" font-family="sans-serif" font-weight="900" font-size="8.5" fill="#005BAC" text-anchor="middle">MG</text>
+                                    <circle cx="36" cy="48" r="4" fill="#2D3748" />
+                                    <circle cx="64" cy="48" r="4" fill="#2D3748" />
+                                    <circle cx="38" cy="46" r="1.5" fill="#FFFFFF" />
+                                    <circle cx="66" cy="46" r="1.5" fill="#FFFFFF" />
+                                    <circle cx="28" cy="55" r="4.5" fill="#FF8A8A" opacity="0.8" />
+                                    <circle cx="72" cy="55" r="4.5" fill="#FF8A8A" opacity="0.8" />
+                                    <path d="M 42,56 Q 50,65 58,56 Z" fill="#E53E3E" />
+                                    <ellipse cx="14" cy="58" rx="5" ry="7" fill="#FFDC2E" transform="rotate(-20 14 58)"/>
+                                    <ellipse cx="86" cy="58" rx="5" ry="7" fill="#FFDC2E" transform="rotate(20 86 58)"/>
+                                </svg>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                                    <span class="text-mgblue-600 font-extrabold">김금고</span>의 대출 상환 팁!
+                                </p>
+                                <p>• <strong>원리금균등:</strong> 매월 지출 금액이 일정해 통장 관리가 편해요.</p>
+                                <p>• <strong>원금균등:</strong> 초기 부담은 크지만, 이자를 가장 높게 절약해요!</p>
+                                <p>• <strong>만기일시:</strong> 당장 매월 나가는 원금 부담을 없애고 싶을 때 유용해요.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Right Output Column (Lg: 8 cols) -->
+            <section class="lg:col-span-8 flex flex-col gap-6">
+                
+                <!-- TOP COMPARISON CARDS (Comparison View) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 print-card">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                                <i class="fa-solid fa-scale-balanced text-mgblue-500"></i>
+                                <span>상환 방식별 비교 요약</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-0.5">동일 조건 시 상환 방식에 따른 월 납입금 및 총 이자 비교</p>
+                        </div>
+                        <span class="text-xs px-2.5 py-1 bg-mgblue-50 text-mgblue-600 rounded-full font-bold border border-mgblue-100 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-mggreen-500 animate-pulse"></span> 실시간 계산중
+                        </span>
+                    </div>
+
+                    <!-- 3 Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        <!-- Card 1: Equal Principal & Interest -->
+                        <div id="cardEqualPMT" class="rounded-xl border-2 border-mgblue-500 bg-white p-4 relative overflow-hidden transition-all shadow-sm">
+                            <div class="absolute top-0 right-0 bg-mgblue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
+                                추천 (인기)
+                            </div>
+                            <div class="text-xs font-bold text-mgblue-700 mb-1">원리금 균등 상환</div>
+                            <p class="text-[11px] text-slate-500 mb-3">매월 똑같은 금액 납부</p>
+                            
+                            <div class="space-y-2 border-t border-slate-100 pt-3">
+                                <div>
+                                    <span class="text-[11px] text-slate-500 font-bold block">1회차 상환액</span>
+                                    <span class="text-lg font-extrabold text-slate-900" id="pmtEqualPMT">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">총 이자</span>
+                                    <span class="font-bold text-mgblue-600" id="interestEqualPMT">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">총 상환금</span>
+                                    <span class="font-semibold text-slate-700" id="totalEqualPMT">0 원</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Equal Principal -->
+                        <div id="cardEqualPrincipal" class="rounded-xl border border-slate-200 bg-white p-4 relative overflow-hidden transition-all hover:border-mgblue-300">
+                            <div class="absolute top-0 right-0 bg-mggreen-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
+                                이자 절감
+                            </div>
+                            <div class="text-xs font-bold text-slate-800 mb-1">원금 균등 상환</div>
+                            <p class="text-[11px] text-slate-500 mb-3">매월 원금 동일 + 이자 줄어듦</p>
+                            
+                            <div class="space-y-2 border-t border-slate-100 pt-3">
+                                <div>
+                                    <span class="text-[11px] text-slate-500 font-bold block">1회차 상환액 (점차 감소)</span>
+                                    <div class="flex items-baseline gap-1">
+                                        <span class="text-lg font-extrabold text-slate-900" id="pmtFirstEqualPrincipal">0</span>
+                                        <span class="text-xs text-slate-400">~</span>
+                                        <span class="text-xs font-bold text-slate-600" id="pmtLastEqualPrincipal">0 원</span>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">총 이자</span>
+                                    <span class="font-bold text-mggreen-600" id="interestEqualPrincipal">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">총 상환금</span>
+                                    <span class="font-semibold text-slate-700" id="totalEqualPrincipal">0 원</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Bullet Repayment -->
+                        <div id="cardBullet" class="rounded-xl border border-slate-200 bg-white p-4 relative overflow-hidden transition-all hover:border-mgblue-300">
+                            <div class="text-xs font-bold text-slate-800 mb-1">만기 일시 상환</div>
+                            <p class="text-[11px] text-slate-500 mb-3">평소 이자만, 만기 시 원금 상환</p>
+                            
+                            <div class="space-y-2 border-t border-slate-100 pt-3">
+                                <div>
+                                    <span class="text-[11px] text-slate-500 font-bold block">1회차 상환액 (이자만)</span>
+                                    <span class="text-lg font-extrabold text-slate-900" id="pmtBullet">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">총 이자</span>
+                                    <span class="font-bold text-rose-600" id="interestBullet">0 원</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">총 상환금</span>
+                                    <span class="font-semibold text-slate-700" id="totalBullet">0 원</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Kim Geum-go Dynamic Recommendation Banner -->
+                    <div id="recommendationBanner" class="mt-4 p-3 bg-gradient-to-r from-mgblue-50 to-blue-50/50 rounded-2xl border border-mgblue-100 flex items-center gap-3 text-xs text-mgblue-900 shadow-sm">
+                        <div class="w-11 h-11 shrink-0">
+                            <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow">
+                                <circle cx="50" cy="55" r="38" fill="#FFDC2E" />
+                                <circle cx="50" cy="55" r="34" fill="#FFE867" />
+                                <path d="M 22,42 C 22,20 78,20 78,42 Z" fill="#005BAC" />
+                                <rect x="38" y="22" width="24" height="12" rx="3" fill="#FFFFFF" />
+                                <text x="50" y="31" font-family="sans-serif" font-weight="900" font-size="9" fill="#005BAC" text-anchor="middle">MG</text>
+                                <circle cx="36" cy="53" r="4" fill="#2D3748" />
+                                <circle cx="64" cy="53" r="4" fill="#2D3748" />
+                                <circle cx="38" cy="51" r="1.5" fill="#FFFFFF" />
+                                <circle cx="66" cy="51" r="1.5" fill="#FFFFFF" />
+                                <circle cx="28" cy="61" r="4.5" fill="#FF8A8A" opacity="0.8" />
+                                <circle cx="72" cy="61" r="4.5" fill="#FF8A8A" opacity="0.8" />
+                                <path d="M 42,62 Q 50,70 58,62" fill="none" stroke="#2D3748" stroke-width="3" stroke-linecap="round" />
+                                <path d="M 82,65 Q 92,50 88,40" fill="none" stroke="#FFDC2E" stroke-width="8" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="font-extrabold text-mgblue-700 mb-0.5 flex items-center gap-1.5">
+                                <i class="fa-solid fa-sparkles text-amber-500"></i>
+                                <span>김금고의 맞춤 분석</span>
+                            </div>
+                            <span id="kimGeumgoAdviceText">
+                                원금균등 선택 시, 원리금균등 대비 <strong class="text-mgblue-700 underline" id="diffInterestAmount">0원</strong>의 이자를 절약할 수 있습니다!
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM DETAILS SECTION (Tabs: Chart vs Amortization Table) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 print-card">
+                    
+                    <!-- Tab Header -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100 no-print">
+                        <div class="flex gap-2">
+                            <button onclick="switchTab('chart')" id="tabBtnChart" class="px-4 py-2 text-xs font-bold rounded-xl bg-mgblue-500 text-white transition-all shadow-sm">
+                                <i class="fa-chart-line mr-1.5"></i>상환 추이 차트
+                            </button>
+                            <button onclick="switchTab('table')" id="tabBtnTable" class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+                                <i class="fa-table-list mr-1.5"></i>월별 상세 상환표
+                            </button>
+                        </div>
+
+                        <!-- Active View Selector for Table -->
+                        <div class="flex items-center gap-2" id="methodSelectorContainer">
+                            <label class="text-xs font-semibold text-slate-500">상세표 기준:</label>
+                            <select id="selectDetailMethod" onchange="renderScheduleTable()" class="text-xs font-bold bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-mgblue-500">
+                                <option value="equalPMT">원리금균등상환</option>
+                                <option value="equalPrincipal">원금균등상환</option>
+                                <option value="bullet">만기일시상환</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: Visual Chart -->
+                    <div id="tabContentChart" class="mt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xs font-bold text-slate-700">월별 대출 잔액 및 누적 부담 추이 비교</h3>
+                            <div class="flex items-center gap-3 text-[11px]">
+                                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-mgblue-500 inline-block"></span>원리금균등</span>
+                                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-mggreen-500 inline-block"></span>원금균등</span>
+                                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>만기일시</span>
+                            </div>
+                        </div>
+                        <div class="h-64 sm:h-72 w-full relative">
+                            <canvas id="loanChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Amortization Schedule Table -->
+                    <div id="tabContentTable" class="mt-4 hidden">
+                        <div class="flex justify-between items-center mb-3 no-print">
+                            <div class="text-xs text-slate-500">
+                                Total <span id="tableTotalCount" class="font-bold text-mgblue-600">36</span>회 차 납입 회차표
+                            </div>
+                            <!-- Active View Selector for Table -->
+                            <div class="flex items-center gap-2" id="methodSelectorContainer">
+                                <label class="text-xs font-semibold text-slate-500">상세표 기준:</label>
+                                <select id="selectDetailMethod" onchange="renderScheduleTable()" class="text-xs font-bold bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-mgblue-500 shadow-xs">
+                                    <option value="compareAll">3개 방식 한눈에 비교</option>
+                                    <option value="equalPMT">원리금균등상환 상세</option>
+                                    <option value="equalPrincipal">원금균등상환 상세</option>
+                                    <option value="bullet">만기일시상환 상세</option>
+                                </select>
+                            </div>
+                            <button onclick="exportToCSV()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 font-semibold flex items-center gap-1 transition-colors">
+                                <i class="fa-solid fa-file-excel text-mggreen-600"></i> 엑셀(CSV) 저장
+                            </button>
+                        </div>
+
+                        <!-- Scrollable Table Wrapper -->
+                        <div class="overflow-x-auto max-h-96 border border-slate-200 rounded-xl shadow-inner">
+                            <table class="w-full text-xs text-right border-collapse">
+                                <thead id="tableHead" class="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200 shadow-xs">
+                                    <!-- Dynamic header via JavaScript -->
+                                </thead>
+                                <tbody id="tableBody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                                    <!-- Dynamic rows via JavaScript -->
+                                </tbody>
+                                <tfoot id="tableFoot" class="bg-slate-100/90 font-bold text-slate-800 sticky bottom-0 border-t-2 border-slate-300 shadow-xs">
+                                    <!-- Dynamic totals via JavaScript -->
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- Customer Staff Consultation Summary -->
+        <div id="staffConsultationMemo" class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 no-print">
+            <h3 class="text-sm font-bold text-mgblue-700 mb-2 flex items-center gap-1.5">
+                <i class="fa-solid fa-clipboard-user"></i> 창구 고객 상담 메모 작성 및 안내
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                    <label class="block text-slate-600 font-medium mb-1">고객명 / 상담 메모</label>
+                    <input type="text" id="memoCustomer" placeholder="예: 홍길동 고객님 (주택담보대출 상담)" class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-mgblue-500 border-slate-300">
+                </div>
+                <div>
+                    <label class="block text-slate-600 font-medium mb-1">담당 직원 / 창구 번호</label>
+                    <input type="text" id="memoStaff" placeholder="예: 김새마을 대리 (1번 창구)" class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-mgblue-500 border-slate-300">
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-400 text-xs py-6 mt-10 no-print border-t border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+            <p class="font-semibold text-slate-300">MG 새마을금고 금융계산기 서비스</p>
+            <p class="text-slate-500">본 시뮬레이션은 대출 수수료, 우대 금리, 중도상환수수료 조건에 따라 실제 상환액과 상이할 수 있습니다.</p>
+            <p class="text-[11px] text-slate-600">Copyright © KFCC. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // App State
+        const state = {
+            amount: 50000000,
+            rate: 4.5,
+            period: 36, // months
+            periodUnit: 'months', // 'months' | 'years'
+            grace: 0,   // months
+            mode: 'staff', // 'staff' | 'customer'
+            activeTab: 'chart', // 'chart' | 'table'
+            results: {
+                equalPMT: { monthly: [], totalInterest: 0, totalRepayment: 0 },
+                equalPrincipal: { monthly: [], totalInterest: 0, totalRepayment: 0 },
+                bullet: { monthly: [], totalInterest: 0, totalRepayment: 0 }
+            }
+        };
+
+        let chartInstance = null;
+
+        // Initialize App on DOM Load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set Print Date
+            const today = new Date();
+            const dateStr = today.getFullYear() + '년 ' + (today.getMonth() + 1) + '월 ' + today.getDate() + '일';
+            const printElem = document.getElementById('printDate');
+            if (printElem) {
+                printElem.innerText = dateStr;
+            }
+
+            // Initial calculation
+            calculateAll();
+        });
+
+        // Utility: Number Formatters
+        function formatKRW(number) {
+            return new Intl.NumberFormat('ko-KR').format(Math.round(number)) + ' 원';
+        }
+
+        function setText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+        }
+
+        function setHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
+        function formatSimpleKoreanAmount(amount) {
+            if (amount >= 100000000) {
+                const uk = Math.floor(amount / 100000000);
+                const man = Math.round((amount % 100000000) / 10000);
+                return man > 0 ? uk + '억 ' + new Intl.NumberFormat('ko-KR').format(man) + '만원' : uk + '억원';
+            } else {
+                const man = Math.round(amount / 10000);
+                return new Intl.NumberFormat('ko-KR').format(man) + ' 만원';
+            }
+        }
+
+        function togglePeriodUnit(unit) {
+            state.periodUnit = unit;
+            const btnMonths = document.getElementById('unitBtnMonths');
+            const btnYears = document.getElementById('unitBtnYears');
+            const unitLabel = document.getElementById('periodUnitLabel');
+            const inputPeriod = document.getElementById('inputPeriod');
+
+            if (unit === 'years') {
+                btnYears.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md bg-white text-mgblue-600 shadow-xs';
+                btnMonths.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-700';
+                if (unitLabel) unitLabel.innerText = '년';
+                if (inputPeriod) {
+                    const yrs = Math.max(1, Math.round(state.period / 12));
+                    inputPeriod.value = yrs;
+                    inputPeriod.max = 30;
+                }
+            } else {
+                btnMonths.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md bg-white text-mgblue-600 shadow-xs';
+                btnYears.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-700';
+                if (unitLabel) unitLabel.innerText = '개월';
+                if (inputPeriod) {
+                    inputPeriod.value = state.period;
+                    inputPeriod.max = 360;
+                }
+            }
+        }
+
+        function addRate(delta) {
+            let newRate = Math.round((state.rate + delta) * 100) / 100;
+            if (newRate < 0.1) newRate = 0.1;
+            if (newRate > 24) newRate = 24;
+            state.rate = newRate;
+            const inputRate = document.getElementById('inputRate');
+            const rangeRate = document.getElementById('rangeRate');
+            if (inputRate) inputRate.value = newRate;
+            if (rangeRate) rangeRate.value = newRate;
+            setText('formattedRateText', newRate.toFixed(2) + ' %');
+            calculateAll();
+        }
+
+        function updateInputsFromNumber(type) {
+            if (type === 'amount') {
+                const val = parseFloat(document.getElementById('inputAmount')?.value) || 0;
+                state.amount = val;
+                setText('formattedAmountText', formatSimpleKoreanAmount(val));
+            } else if (type === 'rate') {
+                const val = parseFloat(document.getElementById('inputRate')?.value) || 0;
+                state.rate = val;
+                const rangeRate = document.getElementById('rangeRate');
+                if (rangeRate) rangeRate.value = val;
+                setText('formattedRateText', val.toFixed(2) + ' %');
+            } else if (type === 'period') {
+                const val = parseInt(document.getElementById('inputPeriod')?.value, 10) || 1;
+                if (state.periodUnit === 'years') {
+                    state.period = val * 12;
+                } else {
+                    state.period = val;
+                }
+                updatePeriodBtnState(state.period);
+                setText('formattedPeriodText', Math.floor(state.period / 12) + '년 (' + state.period + '개월)');
+            }
+            calculateAll();
+        }
+
+        function updateInputsFromRange(type) {
+            if (type === 'rate') {
+                const rangeRate = document.getElementById('rangeRate');
+                const val = rangeRate ? parseFloat(rangeRate.value) : 4.5;
+                state.rate = val;
+                const inputRate = document.getElementById('inputRate');
+                if (inputRate) inputRate.value = val;
+                setText('formattedRateText', val.toFixed(2) + ' %');
+            }
+            calculateAll();
+        }
+
+        function addAmount(addVal) {
+            state.amount += addVal;
+            const inputAmt = document.getElementById('inputAmount');
+            if (inputAmt) inputAmt.value = state.amount;
+            setText('formattedAmountText', formatSimpleKoreanAmount(state.amount));
+            calculateAll();
+        }
+
+        function setPeriod(months) {
+            state.period = months;
+            const inputPer = document.getElementById('inputPeriod');
+            if (inputPer) {
+                if (state.periodUnit === 'years') {
+                    inputPer.value = Math.floor(months / 12);
+                } else {
+                    inputPer.value = months;
+                }
+            }
+            const years = Math.floor(months / 12);
+            setText('formattedPeriodText', years > 0 ? years + '년 (' + months + '개월)' : months + '개월');
+            updatePeriodBtnState(months);
+            calculateAll();
+        }
+
+        function updatePeriodBtnState(months) {
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                if (parseInt(btn.getAttribute('data-months'), 10) === months) {
+                    btn.classList.add('bg-mgblue-50', 'border-mgblue-500', 'text-mgblue-600', 'active');
+                    btn.classList.remove('border-slate-200', 'text-slate-600');
+                } else {
+                    btn.classList.remove('bg-mgblue-50', 'border-mgblue-500', 'text-mgblue-600', 'active');
+                    btn.classList.add('border-slate-200', 'text-slate-600');
+                }
+            });
+        }
+
+        function resetInputs() {
+            state.amount = 50000000;
+            state.rate = 4.5;
+            state.period = 36;
+            state.grace = 0;
+
+            const inputAmt = document.getElementById('inputAmount');
+            if (inputAmt) inputAmt.value = 50000000;
+            const inputRate = document.getElementById('inputRate');
+            if (inputRate) inputRate.value = 4.5;
+            const rangeRate = document.getElementById('rangeRate');
+            if (rangeRate) rangeRate.value = 4.5;
+            const inputPeriod = document.getElementById('inputPeriod');
+            if (inputPeriod) inputPeriod.value = 36;
+            const selectGrace = document.getElementById('selectGrace');
+            if (selectGrace) selectGrace.value = 0;
+
+            setText('formattedAmountText', '5,000 만원');
+            setText('formattedRateText', '4.50 %');
+            setText('formattedPeriodText', '3년 (36개월)');
+            setText('formattedGraceText', '없음 (0개월)');
+
+            updatePeriodBtnState(36);
+            calculateAll();
+        }
+
+        // Core Loan Calculations
+        function calculateAll() {
+            // Read grace period
+            const selectGrace = document.getElementById('selectGrace');
+            state.grace = selectGrace ? (parseInt(selectGrace.value, 10) || 0) : 0;
+            const graceText = state.grace === 0 ? '없음 (0개월)' : state.grace + '개월 거치';
+            setText('formattedGraceText', graceText);
+
+            const P = state.amount; // Principal
+            const r = (state.rate / 100) / 12; // Monthly Interest Rate
+            const N = state.period; // Total Months
+            const G = state.grace; // Grace Months
+
+            // Check validity
+            if (P <= 0 || N <= 0 || r <= 0) return;
+
+            // 1. 원리금 균등 분할 상환 (Equal Principal & Interest)
+            state.results.equalPMT = calcEqualPMT(P, r, N, G);
+
+            // 2. 원금 균등 분할 상환 (Equal Principal)
+            state.results.equalPrincipal = calcEqualPrincipal(P, r, N, G);
+
+            // 3. 만기 일시 상환 (Bullet Repayment)
+            state.results.bullet = calcBullet(P, r, N);
+
+            // Render Output Views
+            renderCards();
+            renderChart();
+            renderScheduleTable();
+        }
+
+        // Calculation 1: Equal PMT
+        function calcEqualPMT(P, r, N, G) {
+            const monthly = [];
+            let totalInterest = 0;
+            let balance = P;
+            const repayMonths = N - G;
+
+            let pmt = 0;
+            if (repayMonths > 0) {
+                pmt = P * (r * Math.pow(1 + r, repayMonths)) / (Math.pow(1 + r, repayMonths) - 1);
+            }
+
+            for (let m = 1; m <= N; m++) {
+                let interestPay = balance * r;
+                let principalPay = 0;
+
+                if (m <= G) {
+                    principalPay = 0;
+                } else {
+                    principalPay = pmt - interestPay;
+                    if (m === N) {
+                        principalPay = balance;
+                        pmt = principalPay + interestPay;
+                    }
+                }
+
+                balance -= principalPay;
+                if (balance < 0) balance = 0;
+
+                totalInterest += interestPay;
+
+                monthly.push({
+                    month: m,
+                    payment: Math.round(principalPay + interestPay),
+                    principal: Math.round(principalPay),
+                    interest: Math.round(interestPay),
+                    balance: Math.round(balance)
+                });
+            }
+
+            return {
+                monthly: monthly,
+                totalInterest: Math.round(totalInterest),
+                totalRepayment: Math.round(P + totalInterest)
+            };
+        }
+
+        // Calculation 2: Equal Principal
+        function calcEqualPrincipal(P, r, N, G) {
+            const monthly = [];
+            let totalInterest = 0;
+            let balance = P;
+            const repayMonths = N - G;
+            const monthlyPrincipal = repayMonths > 0 ? P / repayMonths : 0;
+
+            for (let m = 1; m <= N; m++) {
+                let interestPay = balance * r;
+                let principalPay = 0;
+
+                if (m <= G) {
+                    principalPay = 0;
+                } else {
+                    principalPay = (m === N) ? balance : monthlyPrincipal;
+                }
+
+                balance -= principalPay;
+                if (balance < 0) balance = 0;
+
+                totalInterest += interestPay;
+
+                monthly.push({
+                    month: m,
+                    payment: Math.round(principalPay + interestPay),
+                    principal: Math.round(principalPay),
+                    interest: Math.round(interestPay),
+                    balance: Math.round(balance)
+                });
+            }
+
+            return {
+                monthly: monthly,
+                totalInterest: Math.round(totalInterest),
+                totalRepayment: Math.round(P + totalInterest)
+            };
+        }
+
+        // Calculation 3: Bullet Repayment
+        function calcBullet(P, r, N) {
+            const monthly = [];
+            let totalInterest = 0;
+            let balance = P;
+
+            for (let m = 1; m <= N; m++) {
+                const interestPay = P * r;
+                let principalPay = 0;
+
+                if (m === N) {
+                    principalPay = P;
+                    balance = 0;
+                }
+
+                totalInterest += interestPay;
+
+                monthly.push({
+                    month: m,
+                    payment: Math.round(principalPay + interestPay),
+                    principal: Math.round(principalPay),
+                    interest: Math.round(interestPay),
+                    balance: Math.round(balance)
+                });
+            }
+
+            return {
+                monthly: monthly,
+                totalInterest: Math.round(totalInterest),
+                totalRepayment: Math.round(P + totalInterest)
+            };
+        }
+
+        // Render Summary Cards & Kim Geum-go Dynamic Advice
+        function renderCards() {
+            const equalPMT = state.results.equalPMT;
+            const equalPrincipal = state.results.equalPrincipal;
+            const bullet = state.results.bullet;
+
+            // Equal PMT Card
+            const avgPMT = equalPMT.monthly.length > state.grace 
+                ? equalPMT.monthly[state.grace].payment 
+                : equalPMT.monthly[0].payment;
+            setText('pmtEqualPMT', formatKRW(avgPMT));
+            setText('interestEqualPMT', formatKRW(equalPMT.totalInterest));
+            setText('totalEqualPMT', formatKRW(equalPMT.totalRepayment));
+
+            // Equal Principal Card
+            const firstPMT = equalPrincipal.monthly[state.grace] ? equalPrincipal.monthly[state.grace].payment : equalPrincipal.monthly[0].payment;
+            const lastPMT = equalPrincipal.monthly[equalPrincipal.monthly.length - 1].payment;
+            setText('pmtFirstEqualPrincipal', new Intl.NumberFormat('ko-KR').format(firstPMT) + '원');
+            setText('pmtLastEqualPrincipal', formatKRW(lastPMT));
+            setText('interestEqualPrincipal', formatKRW(equalPrincipal.totalInterest));
+            setText('totalEqualPrincipal', formatKRW(equalPrincipal.totalRepayment));
+
+            // Bullet Card
+            const monthlyInterestOnly = bullet.monthly[0].interest;
+            setText('pmtBullet', formatKRW(monthlyInterestOnly));
+            setText('interestBullet', formatKRW(bullet.totalInterest));
+            setText('totalBullet', formatKRW(bullet.totalRepayment));
+
+            // Recommendation Diff & Dynamic Advice from Kim Geum-go
+            const diffInterest = equalPMT.totalInterest - equalPrincipal.totalInterest;
+            const bulletDiffInterest = bullet.totalInterest - equalPMT.totalInterest;
+
+            if (state.grace > 0) {
+                setHTML('kimGeumgoAdviceText', '현재 <strong>' + state.grace + '개월 거치기간</strong> 설정 중입니다. 거치 기간 이후부터 원금 상환이 시작되며, <strong>원금균등상환</strong>을 선택하시면 원리금균등 대비 약 <strong class="text-mgblue-700 underline">' + formatKRW(diffInterest) + '</strong>의 이자를 아낄 수 있어요!');
+            } else {
+                setHTML('kimGeumgoAdviceText', '<strong>원금균등상환</strong>을 선택하시면 원리금균등 대비 <strong class="text-mgblue-700 underline">' + formatKRW(diffInterest) + '</strong>의 이자를 절약할 수 있어요! 만기일시 상환은 원리금균등보다 이자를 <strong class="text-rose-600">' + formatKRW(bulletDiffInterest) + '</strong> 더 부담하게 됩니다.');
+            }
+        }
+
+        // Render Chart
+        function renderChart() {
+            const canvas = document.getElementById('loanChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const labels = state.results.equalPMT.monthly.map(item => item.month + '회');
+            const dataEqualPMT = state.results.equalPMT.monthly.map(item => item.balance);
+            const dataEqualPrincipal = state.results.equalPrincipal.monthly.map(item => item.balance);
+            const dataBullet = state.results.bullet.monthly.map(item => item.balance);
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '원리금균등 (잔액)',
+                            data: dataEqualPMT,
+                            borderColor: '#005BAC', // MG Blue
+                            backgroundColor: 'rgba(0, 91, 172, 0.05)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: '원금균등 (잔액)',
+                            data: dataEqualPrincipal,
+                            borderColor: '#139D48', // MG Green
+                            backgroundColor: 'rgba(19, 157, 72, 0.05)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: '만기일시 (잔액)',
+                            data: dataBullet,
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + new Intl.NumberFormat('ko-KR').format(context.parsed.y) + ' 원';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxTicksLimit: 12,
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return (value / 10000).toLocaleString() + '만';
+                                },
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render Schedule Table
+        function renderScheduleTable() {
+            const methodSelect = document.getElementById('selectDetailMethod');
+            const methodKey = methodSelect ? methodSelect.value : 'compareAll';
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            const tfoot = document.getElementById('tableFoot');
+            
+            if (!tbody || !thead) return;
+
+            if (methodKey === 'compareAll') {
+                // 3개 상환방식 동시 비교표
+                setText('tableTotalCount', state.period);
+                
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-2.5 px-3 text-center bg-slate-200/80 border-r border-slate-300" rowspan="2">회차</th>
+                        <th class="py-2 px-3 text-center border-b border-r border-slate-200 bg-mgblue-50 text-mgblue-800" colspan="2">원리금균등상환</th>
+                        <th class="py-2 px-3 text-center border-b border-r border-slate-200 bg-emerald-50 text-emerald-800" colspan="2">원금균등상환</th>
+                        <th class="py-2 px-3 text-center border-b border-slate-200 bg-rose-50 text-rose-800" colspan="2">만기일시상환</th>
+                    </tr>
+                    <tr>
+                        <th class="py-1.5 px-2 bg-mgblue-50/60 text-mgblue-700">월상환액</th>
+                        <th class="py-1.5 px-2 bg-mgblue-50/60 text-mgblue-600 border-r border-slate-200">대출잔액</th>
+                        <th class="py-1.5 px-2 bg-emerald-50/60 text-emerald-700">월상환액</th>
+                        <th class="py-1.5 px-2 bg-emerald-50/60 text-emerald-600 border-r border-slate-200">대출잔액</th>
+                        <th class="py-1.5 px-2 bg-rose-50/60 text-rose-700">월상환액</th>
+                        <th class="py-1.5 px-2 bg-rose-50/60 text-rose-600">대출잔액</th>
+                    </tr>
+                `;
+
+                tbody.innerHTML = '';
+                const eqPmt = state.results.equalPMT.monthly;
+                const eqPrin = state.results.equalPrincipal.monthly;
+                const bullet = state.results.bullet.monthly;
+
+                for (let i = 0; i < state.period; i++) {
+                    const rowPmt = eqPmt[i] || {};
+                    const rowPrin = eqPrin[i] || {};
+                    const rowBul = bullet[i] || {};
+                    const m = i + 1;
+
+                    const tr = document.createElement('tr');
+                    tr.className = m % 2 === 0 ? 'bg-slate-50/60 hover:bg-mgblue-50/40' : 'bg-white hover:bg-mgblue-50/40';
+                    tr.innerHTML = `
+                        <td class="py-2 px-3 text-center font-bold text-slate-500 border-r border-slate-200">${m}회</td>
+                        <td class="py-2 px-2 font-bold text-mgblue-900">${new Intl.NumberFormat('ko-KR').format(rowPmt.payment || 0)}원</td>
+                        <td class="py-2 px-2 text-slate-500 border-r border-slate-200">${new Intl.NumberFormat('ko-KR').format(rowPmt.balance || 0)}원</td>
+                        <td class="py-2 px-2 font-bold text-emerald-900">${new Intl.NumberFormat('ko-KR').format(rowPrin.payment || 0)}원</td>
+                        <td class="py-2 px-2 text-slate-500 border-r border-slate-200">${new Intl.NumberFormat('ko-KR').format(rowPrin.balance || 0)}원</td>
+                        <td class="py-2 px-2 font-bold text-rose-900">${new Intl.NumberFormat('ko-KR').format(rowBul.payment || 0)}원</td>
+                        <td class="py-2 px-2 text-slate-500">${new Intl.NumberFormat('ko-KR').format(rowBul.balance || 0)}원</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+
+                if (tfoot) {
+                    tfoot.innerHTML = `
+                        <tr>
+                            <td class="py-2.5 px-3 text-center border-r border-slate-300">총상환금</td>
+                            <td class="py-2.5 px-2 text-mgblue-700">${new Intl.NumberFormat('ko-KR').format(state.results.equalPMT.totalRepayment)}원</td>
+                            <td class="py-2.5 px-2 text-[10px] text-slate-500 border-r border-slate-300">(이자:${new Intl.NumberFormat('ko-KR').format(state.results.equalPMT.totalInterest)})</td>
+                            <td class="py-2.5 px-2 text-emerald-700">${new Intl.NumberFormat('ko-KR').format(state.results.equalPrincipal.totalRepayment)}원</td>
+                            <td class="py-2.5 px-2 text-[10px] text-slate-500 border-r border-slate-300">(이자:${new Intl.NumberFormat('ko-KR').format(state.results.equalPrincipal.totalInterest)})</td>
+                            <td class="py-2.5 px-2 text-rose-700">${new Intl.NumberFormat('ko-KR').format(state.results.bullet.totalRepayment)}원</td>
+                            <td class="py-2.5 px-2 text-[10px] text-slate-500">(이자:${new Intl.NumberFormat('ko-KR').format(state.results.bullet.totalInterest)})</td>
+                        </tr>
+                    `;
+                }
+
+            } else {
+                // 단일 상환방식 상세 표
+                const data = state.results[methodKey];
+                setText('tableTotalCount', data.monthly.length);
+
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-2.5 px-3 text-center">회차</th>
+                        <th class="py-2.5 px-3">월 납입금 (원금+이자)</th>
+                        <th class="py-2.5 px-3">상환 원금</th>
+                        <th class="py-2.5 px-3">대출 이자</th>
+                        <th class="py-2.5 px-3">대출 잔액</th>
+                    </tr>
+                `;
+
+                tbody.innerHTML = '';
+                data.monthly.forEach((row) => {
+                    const tr = document.createElement('tr');
+                    tr.className = row.month % 2 === 0 ? 'bg-slate-50/60 hover:bg-mgblue-50/50' : 'bg-white hover:bg-mgblue-50/50';
+                    
+                    tr.innerHTML = `
+                        <td class="py-2 px-3 text-center font-bold text-slate-500">${row.month}회</td>
+                        <td class="py-2 px-3 font-bold text-slate-900">${new Intl.NumberFormat('ko-KR').format(row.payment)}원</td>
+                        <td class="py-2 px-3 text-mgblue-600">${new Intl.NumberFormat('ko-KR').format(row.principal)}원</td>
+                        <td class="py-2 px-3 text-rose-600">${new Intl.NumberFormat('ko-KR').format(row.interest)}원</td>
+                        <td class="py-2 px-3 text-slate-500">${new Intl.NumberFormat('ko-KR').format(row.balance)}원</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (tfoot) {
+                    tfoot.innerHTML = `
+                        <tr>
+                            <td class="py-2.5 px-3 text-center">총 합계</td>
+                            <td class="py-2.5 px-3 text-slate-900">${new Intl.NumberFormat('ko-KR').format(data.totalRepayment)}원</td>
+                            <td class="py-2.5 px-3 text-mgblue-600">${new Intl.NumberFormat('ko-KR').format(state.amount)}원</td>
+                            <td class="py-2.5 px-3 text-rose-600">${new Intl.NumberFormat('ko-KR').format(data.totalInterest)}원</td>
+                            <td class="py-2.5 px-3 text-slate-400">0원</td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        // Switch Visual Tabs
+        function switchTab(tab) {
+            state.activeTab = tab;
+            const tabBtnChart = document.getElementById('tabBtnChart');
+            const tabBtnTable = document.getElementById('tabBtnTable');
+            const tabContentChart = document.getElementById('tabContentChart');
+            const tabContentTable = document.getElementById('tabContentTable');
+
+            if (tab === 'chart') {
+                tabBtnChart.className = 'px-4 py-2 text-xs font-bold rounded-xl bg-mgblue-500 text-white transition-all shadow-sm';
+                tabBtnTable.className = 'px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all';
+                tabContentChart.classList.remove('hidden');
+                tabContentTable.classList.add('hidden');
+            } else {
+                tabBtnTable.className = 'px-4 py-2 text-xs font-bold rounded-xl bg-mgblue-500 text-white transition-all shadow-sm';
+                tabBtnChart.className = 'px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all';
+                tabContentTable.classList.remove('hidden');
+                tabContentChart.classList.add('hidden');
+            }
+        }
+
+        // Toggle Staff vs Customer Mode
+        function toggleMode(mode) {
+            state.mode = mode;
+            const btnStaff = document.getElementById('btnModeStaff');
+            const btnCustomer = document.getElementById('btnModeCustomer');
+            const memoBox = document.getElementById('staffConsultationMemo');
+
+            if (mode === 'staff') {
+                btnStaff.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-mgblue-500 transition-all shadow-sm';
+                btnCustomer.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-mgblue-600 text-blue-100 hover:text-white transition-all';
+                memoBox.classList.remove('hidden');
+            } else {
+                btnCustomer.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-mgblue-500 transition-all shadow-sm';
+                btnStaff.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-mgblue-600 text-blue-100 hover:text-white transition-all';
+                memoBox.classList.add('hidden');
+            }
+        }
+
+        // Export Schedule Table to CSV
+        function exportToCSV() {
+            const methodKey = document.getElementById('selectDetailMethod').value;
+            let csvContent = "\uFEFF";
+            
+            if (methodKey === 'compareAll') {
+                csvContent += "회차,원리금균등_월상환액,원리금균등_잔액,원금균등_월상환액,원금균등_잔액,만기일시_월상환액,만기일시_잔액\n";
+                const eqPmt = state.results.equalPMT.monthly;
+                const eqPrin = state.results.equalPrincipal.monthly;
+                const bullet = state.results.bullet.monthly;
+
+                for (let i = 0; i < state.period; i++) {
+                    const rPmt = eqPmt[i] || {};
+                    const rPrin = eqPrin[i] || {};
+                    const rBul = bullet[i] || {};
+                    csvContent += `${i+1}회,${rPmt.payment||0},${rPmt.balance||0},${rPrin.payment||0},${rPrin.balance||0},${rBul.payment||0},${rBul.balance||0}\n`;
+                }
+            } else {
+                const data = state.results[methodKey].monthly;
+                csvContent += "회차,월상환금,상환원금,대출이자,대출잔액\n";
+                data.forEach(row => {
+                    csvContent += row.month + ',' + row.payment + ',' + row.principal + ',' + row.interest + ',' + row.balance + '\n';
+                });
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "MG새마을금고_대출상환일정표_" + methodKey + ".csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
